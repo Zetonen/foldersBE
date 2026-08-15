@@ -2,9 +2,11 @@ import { BadRequestException, ConflictException, Injectable, NotFoundException }
 import { InjectDataSource } from '@nestjs/typeorm';
 import { randomUUID } from 'crypto';
 import { DataSource, EntityManager, IsNull, QueryFailedError } from 'typeorm';
+import { AccessDecision } from '../access/access.types';
+import { Role } from '../access/role.enum';
 import { NameConflictService } from '../common/services/name-conflict.service';
-import { DataRoom } from '../data-rooms/entities/data-room.entity';
 import { DataRoomsService } from '../data-rooms/data-rooms.service';
+import { DataRoom } from '../data-rooms/entities/data-room.entity';
 import {
   BreadcrumbDto,
   CreateFolderDto,
@@ -46,9 +48,9 @@ export class FoldersService {
     private readonly nameConflictService: NameConflictService,
   ) {}
 
-  async create(userId: string, dto: CreateFolderDto): Promise<FolderDto> {
+  async create(dto: CreateFolderDto, role: Role): Promise<FolderDto> {
     return this.dataSource.transaction(async (manager) => {
-      await this.dataRoomsService.assertOwnership(userId, dto.dataRoomId, manager);
+      await this.dataRoomsService.getActiveRoom(dto.dataRoomId, manager);
 
       const parent = dto.parentId
         ? await this.getFolderOrFail(manager, dto.parentId, dto.dataRoomId)
@@ -78,35 +80,34 @@ export class FoldersService {
         throw this.translateUniqueViolation(error);
       }
 
-      return FolderDto.fromEntity(await this.getFolderOrFail(manager, id, dto.dataRoomId));
+      return FolderDto.fromEntity(await this.getFolderOrFail(manager, id, dto.dataRoomId), role);
     });
   }
 
   async listChildren(
-    userId: string,
     folderId: string,
     query: ListChildrenQueryDto,
+    access: AccessDecision,
   ): Promise<FolderContentsDto> {
     const folder = await this.getFolderOrFail(this.dataSource.manager, folderId);
-    const room = await this.dataRoomsService.assertOwnership(userId, folder.dataRoomId);
+    const room = await this.dataRoomsService.getActiveRoom(folder.dataRoomId);
 
-    return this.buildContents(room, folder, query);
+    return this.buildContents(room, folder, query, access);
   }
 
   async listRoot(
-    userId: string,
     dataRoomId: string,
     query: ListChildrenQueryDto,
+    access: AccessDecision,
   ): Promise<FolderContentsDto> {
-    const room = await this.dataRoomsService.assertOwnership(userId, dataRoomId);
+    const room = await this.dataRoomsService.getActiveRoom(dataRoomId);
 
-    return this.buildContents(room, null, query);
+    return this.buildContents(room, null, query, access);
   }
 
-  async rename(userId: string, folderId: string, dto: RenameFolderDto): Promise<FolderDto> {
+  async rename(folderId: string, dto: RenameFolderDto, role: Role): Promise<FolderDto> {
     return this.dataSource.transaction(async (manager) => {
       const folder = await this.getFolderOrFail(manager, folderId);
-      await this.dataRoomsService.assertOwnership(userId, folder.dataRoomId, manager);
 
       const name = await this.resolveSiblingName(
         manager,
@@ -118,7 +119,8 @@ export class FoldersService {
 
       try {
         await manager.query(
-          `UPDATE folders SET name = $2, updated_at = now() WHERE id = $1 AND data_room_id = $3`,
+          `UPDATE folders SET name = $2, updated_at = now()
+           WHERE id = $1 AND data_room_id = $3 AND deleted_at IS NULL`,
           [folder.id, name, folder.dataRoomId],
         );
       } catch (error) {
@@ -127,14 +129,14 @@ export class FoldersService {
 
       return FolderDto.fromEntity(
         await this.getFolderOrFail(manager, folder.id, folder.dataRoomId),
+        role,
       );
     });
   }
 
-  async move(userId: string, folderId: string, dto: MoveFolderDto): Promise<FolderDto> {
+  async move(folderId: string, dto: MoveFolderDto, role: Role): Promise<FolderDto> {
     return this.dataSource.transaction(async (manager) => {
       const folder = await this.getFolderOrFail(manager, folderId);
-      await this.dataRoomsService.assertOwnership(userId, folder.dataRoomId, manager);
 
       const parent = dto.parentId
         ? await this.getFolderOrFail(manager, dto.parentId, folder.dataRoomId)
@@ -173,7 +175,8 @@ export class FoldersService {
 
       try {
         await manager.query(
-          `UPDATE folders SET parent_id = $2, name = $3, updated_at = now() WHERE id = $1 AND data_room_id = $4`,
+          `UPDATE folders SET parent_id = $2, name = $3, updated_at = now()
+           WHERE id = $1 AND data_room_id = $4 AND deleted_at IS NULL`,
           [folder.id, parent?.id ?? null, name, folder.dataRoomId],
         );
       } catch (error) {
@@ -182,15 +185,14 @@ export class FoldersService {
 
       return FolderDto.fromEntity(
         await this.getFolderOrFail(manager, folder.id, folder.dataRoomId),
+        role,
       );
     });
   }
 
-  async softDelete(userId: string, folderId: string): Promise<void> {
+  async softDelete(folderId: string): Promise<void> {
     await this.dataSource.transaction(async (manager) => {
       const folder = await this.getFolderOrFail(manager, folderId);
-      await this.dataRoomsService.assertOwnership(userId, folder.dataRoomId, manager);
-
       const pattern = this.pathService.subtreePattern(folder.path);
 
       await manager.query(
@@ -209,9 +211,8 @@ export class FoldersService {
     });
   }
 
-  async stats(userId: string, folderId: string): Promise<FolderStatsDto> {
+  async stats(folderId: string): Promise<FolderStatsDto> {
     const folder = await this.getFolderOrFail(this.dataSource.manager, folderId);
-    await this.dataRoomsService.assertOwnership(userId, folder.dataRoomId);
 
     const rows: Array<{ folder_count: string; file_count: string; total_size: string }> =
       await this.dataSource.query(
@@ -240,10 +241,19 @@ export class FoldersService {
     };
   }
 
-  private async buildContents(
+  getFolderInRoom(
+    dataRoomId: string,
+    folderId: string,
+    manager?: EntityManager,
+  ): Promise<Folder> {
+    return this.getFolderOrFail(manager ?? this.dataSource.manager, folderId, dataRoomId);
+  }
+
+  async buildContents(
     room: DataRoom,
     folder: Folder | null,
     query: ListChildrenQueryDto,
+    access: AccessDecision,
   ): Promise<FolderContentsDto> {
     const limit = query.limit ?? DEFAULT_LIMIT;
     const cursor = this.decodeCursor(query.cursor);
@@ -279,18 +289,28 @@ export class FoldersService {
     const hasMore = rows.length > limit;
     const page = hasMore ? rows.slice(0, limit) : rows;
     const last = page[page.length - 1];
+    const roomIsVisible = access.boundaryId === null || access.boundaryId === room.id;
 
     return {
-      dataRoom: { id: room.id, name: room.name },
-      folder: folder ? FolderDto.fromEntity(folder) : null,
-      breadcrumbs: folder ? await this.buildBreadcrumbs(folder) : [],
+      dataRoom: roomIsVisible ? { id: room.id, name: room.name } : null,
+      folder: folder ? FolderDto.fromEntity(folder, access.role) : null,
+      breadcrumbs: folder ? await this.buildBreadcrumbs(folder, access.boundaryId) : [],
       items: page.map((row) => this.toItemDto(row)),
       nextCursor: hasMore && last ? this.encodeCursor({ n: last.name, i: last.id }) : null,
+      myRole: access.role,
     };
   }
 
-  private async buildBreadcrumbs(folder: Folder): Promise<BreadcrumbDto[]> {
-    const ancestorIds = this.pathService.parseIds(folder.path).slice(0, -1);
+  private async buildBreadcrumbs(
+    folder: Folder,
+    boundaryId: string | null,
+  ): Promise<BreadcrumbDto[]> {
+    let ancestorIds = this.pathService.parseIds(folder.path).slice(0, -1);
+
+    if (boundaryId) {
+      const boundaryIndex = ancestorIds.indexOf(boundaryId);
+      ancestorIds = boundaryIndex === -1 ? [] : ancestorIds.slice(boundaryIndex);
+    }
 
     if (ancestorIds.length === 0) {
       return [];

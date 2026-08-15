@@ -17,6 +17,7 @@ import {
   NAME_PATTERN,
   NAME_PATTERN_MESSAGE,
 } from '../../common/validation/name.rules';
+import { Role } from '../../access/role.enum';
 import { Folder } from '../entities/folder.entity';
 
 export class CreateFolderDto {
@@ -89,7 +90,7 @@ export class FolderDto {
   @ApiProperty({ format: 'uuid', nullable: true })
   parentId!: string | null;
 
-  @ApiProperty()
+  @ApiProperty({ example: 'Financials' })
   name!: string;
 
   @ApiProperty({ example: '/3f4a…/9b0e…/' })
@@ -101,7 +102,10 @@ export class FolderDto {
   @ApiProperty()
   updatedAt!: Date;
 
-  static fromEntity(folder: Folder): FolderDto {
+  @ApiProperty({ enum: Role, description: 'Effective role of the caller on this folder' })
+  myRole!: Role;
+
+  static fromEntity(folder: Folder, myRole: Role): FolderDto {
     return {
       id: folder.id,
       dataRoomId: folder.dataRoomId,
@@ -110,6 +114,7 @@ export class FolderDto {
       path: folder.path,
       createdAt: folder.createdAt,
       updatedAt: folder.updatedAt,
+      myRole,
     };
   }
 }
@@ -118,7 +123,7 @@ export class BreadcrumbDto {
   @ApiProperty({ format: 'uuid' })
   id!: string;
 
-  @ApiProperty()
+  @ApiProperty({ example: '2026' })
   name!: string;
 }
 
@@ -129,7 +134,7 @@ export class FolderItemDto {
   @ApiProperty({ format: 'uuid' })
   id!: string;
 
-  @ApiProperty()
+  @ApiProperty({ example: 'audit.pdf' })
   name!: string;
 
   @ApiProperty({ nullable: true, description: 'Files only', example: 1048576 })
@@ -146,13 +151,20 @@ export class FolderItemDto {
 }
 
 export class FolderContentsDto {
-  @ApiProperty({ type: () => Object, description: 'The data room the listing belongs to' })
-  dataRoom!: { id: string; name: string };
+  @ApiProperty({
+    type: () => Object,
+    nullable: true,
+    description: 'null when the caller reached this listing through a share below the room root',
+  })
+  dataRoom!: { id: string; name: string } | null;
 
   @ApiProperty({ type: FolderDto, nullable: true, description: 'null for the data room root' })
   folder!: FolderDto | null;
 
-  @ApiProperty({ type: [BreadcrumbDto], description: 'Ancestors, closest to the root first' })
+  @ApiProperty({
+    type: [BreadcrumbDto],
+    description: 'Ancestors, closest to the root first. Trimmed at the share root for recipients.',
+  })
   breadcrumbs!: BreadcrumbDto[];
 
   @ApiProperty({ type: [FolderItemDto] })
@@ -160,6 +172,9 @@ export class FolderContentsDto {
 
   @ApiProperty({ nullable: true, description: 'Pass back as ?cursor= to fetch the next page' })
   nextCursor!: string | null;
+
+  @ApiProperty({ enum: Role, description: 'Effective role of the caller, items inherit it' })
+  myRole!: Role;
 }
 
 export class FolderStatsDto {

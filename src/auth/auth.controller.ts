@@ -7,8 +7,10 @@ import {
   ApiOkResponse,
   ApiOperation,
   ApiTags,
+  ApiTooManyRequestsResponse,
   ApiUnauthorizedResponse,
 } from '@nestjs/swagger';
+import { ThrottlerGuard } from '@nestjs/throttler';
 import { Request, Response } from 'express';
 import {
   clearedRefreshCookieOptions,
@@ -32,6 +34,10 @@ export class AuthController {
 
   @Post('register')
   @HttpCode(HttpStatus.CREATED)
+  @UseGuards(ThrottlerGuard)
+  @ApiTooManyRequestsResponse({
+    description: 'Rate limit exceeded (AUTH_THROTTLE_LIMIT per AUTH_THROTTLE_TTL_SECONDS, per IP)',
+  })
   @ApiOperation({
     summary: 'Register a new user',
     description:
@@ -48,6 +54,10 @@ export class AuthController {
 
   @Post('login')
   @HttpCode(HttpStatus.OK)
+  @UseGuards(ThrottlerGuard)
+  @ApiTooManyRequestsResponse({
+    description: 'Rate limit exceeded (AUTH_THROTTLE_LIMIT per AUTH_THROTTLE_TTL_SECONDS, per IP)',
+  })
   @ApiOperation({
     summary: 'Log in',
     description:

@@ -72,6 +72,40 @@ export class EnvironmentVariables {
   @Matches(/^\d+[smhd]?$/)
   @IsOptional()
   JWT_REFRESH_TTL: string = '7d';
+
+  @IsString()
+  SUPABASE_URL!: string;
+
+  @IsString()
+  SUPABASE_SERVICE_ROLE_KEY!: string;
+
+  @IsString()
+  SUPABASE_STORAGE_BUCKET!: string;
+
+  @Transform(({ value }) => (value === undefined ? 104857600 : Number(value)))
+  @IsInt()
+  @Min(1)
+  FILE_MAX_SIZE_BYTES: number = 104857600;
+
+  @IsString()
+  @IsOptional()
+  FILE_ALLOWED_MIME_TYPES: string = 'application/pdf';
+
+  @Transform(({ value }) => (value === undefined ? 900 : Number(value)))
+  @IsInt()
+  @Min(1)
+  @Max(604800)
+  FILE_DOWNLOAD_URL_TTL_SECONDS: number = 900;
+
+  @Transform(({ value }) => (value === undefined ? 10 : Number(value)))
+  @IsInt()
+  @Min(1)
+  AUTH_THROTTLE_LIMIT: number = 10;
+
+  @Transform(({ value }) => (value === undefined ? 60 : Number(value)))
+  @IsInt()
+  @Min(1)
+  AUTH_THROTTLE_TTL_SECONDS: number = 60;
 }
 
 export function validateEnv(config: Record<string, unknown>): EnvironmentVariables {

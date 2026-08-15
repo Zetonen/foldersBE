@@ -13,15 +13,11 @@ export class DataRoomsService {
     private readonly dataSource: DataSource,
   ) {}
 
-  async assertOwnership(
-    userId: string,
-    dataRoomId: string,
-    manager?: EntityManager,
-  ): Promise<DataRoom> {
+  async getActiveRoom(dataRoomId: string, manager?: EntityManager): Promise<DataRoom> {
     const repository = manager ? manager.getRepository(DataRoom) : this.dataRoomsRepository;
     const room = await repository.findOne({ where: { id: dataRoomId, deletedAt: IsNull() } });
 
-    if (!room || room.ownerId !== userId) {
+    if (!room) {
       throw new NotFoundException('Data room not found');
     }
 
@@ -41,16 +37,16 @@ export class DataRoomsService {
     });
   }
 
-  async rename(userId: string, dataRoomId: string, dto: RenameDataRoomDto): Promise<DataRoom> {
-    const room = await this.assertOwnership(userId, dataRoomId);
+  async rename(dataRoomId: string, dto: RenameDataRoomDto): Promise<DataRoom> {
+    const room = await this.getActiveRoom(dataRoomId);
     room.name = dto.name;
 
     return this.dataRoomsRepository.save(room);
   }
 
-  async softDelete(userId: string, dataRoomId: string): Promise<void> {
+  async softDelete(dataRoomId: string): Promise<void> {
     await this.dataSource.transaction(async (manager) => {
-      await this.assertOwnership(userId, dataRoomId, manager);
+      await this.getActiveRoom(dataRoomId, manager);
 
       await manager.query(
         `UPDATE files SET deleted_at = now() WHERE data_room_id = $1 AND deleted_at IS NULL`,
