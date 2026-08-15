@@ -5,8 +5,10 @@ import {
   IsInt,
   IsOptional,
   IsString,
+  Matches,
   Max,
   Min,
+  MinLength,
   validateSync,
 } from 'class-validator';
 
@@ -52,6 +54,24 @@ export class EnvironmentVariables {
   @IsBoolean()
   @IsOptional()
   DATABASE_LOGGING: boolean = false;
+
+  @IsString()
+  @MinLength(32)
+  JWT_ACCESS_SECRET!: string;
+
+  @IsString()
+  @MinLength(32)
+  JWT_REFRESH_SECRET!: string;
+
+  @IsString()
+  @Matches(/^\d+[smhd]?$/)
+  @IsOptional()
+  JWT_ACCESS_TTL: string = '15m';
+
+  @IsString()
+  @Matches(/^\d+[smhd]?$/)
+  @IsOptional()
+  JWT_REFRESH_TTL: string = '7d';
 }
 
 export function validateEnv(config: Record<string, unknown>): EnvironmentVariables {

@@ -3,11 +3,14 @@ import { Logger, ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import cookieParser from 'cookie-parser';
 import { AppModule } from './app.module';
 
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create(AppModule);
   const config = app.get(ConfigService);
+
+  app.use(cookieParser());
 
   app.useGlobalPipes(
     new ValidationPipe({
@@ -35,6 +38,7 @@ async function bootstrap(): Promise<void> {
     .setVersion('0.1.0')
     .addBearerAuth({ type: 'http', scheme: 'bearer', bearerFormat: 'JWT' }, 'access-token')
     .addApiKey({ type: 'apiKey', name: 'X-Share-Token', in: 'header' }, 'share-token')
+    .addCookieAuth('refresh_token')
     .build();
 
   SwaggerModule.setup('api/docs', app, SwaggerModule.createDocument(app, swaggerConfig), {
