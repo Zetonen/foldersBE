@@ -53,7 +53,9 @@ function planCounts(total: number): number[] {
   return counts;
 }
 
-async function findOrCreateOwner(manager: EntityManager): Promise<{ id: string; created: boolean }> {
+async function findOrCreateOwner(
+  manager: EntityManager,
+): Promise<{ id: string; created: boolean }> {
   const existing: Array<{ id: string }> = await manager.query(
     `SELECT id FROM users WHERE email = $1`,
     [OWNER_EMAIL],

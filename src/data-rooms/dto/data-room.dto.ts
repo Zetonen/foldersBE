@@ -6,11 +6,12 @@ import {
   NAME_PATTERN,
   NAME_PATTERN_MESSAGE,
 } from '../../common/validation/name.rules';
+import { trim } from '../../common/validation/transforms';
 import { DataRoom } from '../entities/data-room.entity';
 
 export class CreateDataRoomDto {
   @ApiProperty({ example: 'Series A due diligence', minLength: 1, maxLength: NAME_MAX_LENGTH })
-  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  @Transform(trim)
   @IsString()
   @MinLength(1)
   @MaxLength(NAME_MAX_LENGTH)

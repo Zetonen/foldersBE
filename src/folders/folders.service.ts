@@ -1,4 +1,9 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { randomUUID } from 'crypto';
 import { DataSource, EntityManager, IsNull, QueryFailedError } from 'typeorm';
@@ -265,11 +270,7 @@ export class FoldersService {
     };
   }
 
-  getFolderInRoom(
-    dataRoomId: string,
-    folderId: string,
-    manager?: EntityManager,
-  ): Promise<Folder> {
+  getFolderInRoom(dataRoomId: string, folderId: string, manager?: EntityManager): Promise<Folder> {
     return this.getFolderOrFail(manager ?? this.dataSource.manager, folderId, dataRoomId);
   }
 
@@ -459,7 +460,10 @@ export class FoldersService {
   }
 
   private translateUniqueViolation(error: unknown): Error {
-    if (error instanceof QueryFailedError && (error as { code?: string }).code === UNIQUE_VIOLATION) {
+    if (
+      error instanceof QueryFailedError &&
+      (error as { code?: string }).code === UNIQUE_VIOLATION
+    ) {
       return new ConflictException('A folder with this name already exists here');
     }
 

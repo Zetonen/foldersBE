@@ -7,7 +7,9 @@ loadEnv();
 const url = process.env.DIRECT_URL;
 
 if (!url) {
-  throw new Error('DIRECT_URL is required to run migrations (Supabase direct connection, port 5432)');
+  throw new Error(
+    'DIRECT_URL is required to run migrations (Supabase direct connection, port 5432)',
+  );
 }
 
 export const dataSourceOptions = buildDataSourceOptions({

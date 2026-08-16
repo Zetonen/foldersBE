@@ -4,7 +4,9 @@ export class InitialSchema1786809554648 implements MigrationInterface {
   name = 'InitialSchema1786809554648';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
-    await queryRunner.query(`CREATE TYPE "share_resource_type_enum" AS ENUM ('DATA_ROOM', 'FOLDER', 'FILE')`);
+    await queryRunner.query(
+      `CREATE TYPE "share_resource_type_enum" AS ENUM ('DATA_ROOM', 'FOLDER', 'FILE')`,
+    );
     await queryRunner.query(`CREATE TYPE "share_kind_enum" AS ENUM ('USER', 'PUBLIC_LINK')`);
     await queryRunner.query(`CREATE TYPE "share_role_enum" AS ENUM ('VIEWER')`);
 
@@ -101,7 +103,9 @@ export class InitialSchema1786809554648 implements MigrationInterface {
       CREATE UNIQUE INDEX "uq_files_room_root_name" ON "files" ("data_room_id", "name")
       WHERE "folder_id" IS NULL AND "deleted_at" IS NULL
     `);
-    await queryRunner.query(`CREATE UNIQUE INDEX "uq_files_storage_key" ON "files" ("storage_key")`);
+    await queryRunner.query(
+      `CREATE UNIQUE INDEX "uq_files_storage_key" ON "files" ("storage_key")`,
+    );
 
     await queryRunner.query(`
       CREATE TABLE "shares" (

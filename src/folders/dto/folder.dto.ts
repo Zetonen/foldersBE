@@ -17,6 +17,7 @@ import {
   NAME_PATTERN,
   NAME_PATTERN_MESSAGE,
 } from '../../common/validation/name.rules';
+import { trim } from '../../common/validation/transforms';
 import { Role } from '../../access/role.enum';
 import { Folder } from '../entities/folder.entity';
 
@@ -36,7 +37,7 @@ export class CreateFolderDto {
   parentId?: string | null;
 
   @ApiProperty({ example: 'Financials', maxLength: NAME_MAX_LENGTH })
-  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  @Transform(trim)
   @IsString()
   @MinLength(1)
   @MaxLength(NAME_MAX_LENGTH)
@@ -46,7 +47,7 @@ export class CreateFolderDto {
 
 export class RenameFolderDto {
   @ApiProperty({ example: 'Financials 2026', maxLength: NAME_MAX_LENGTH })
-  @Transform(({ value }) => (typeof value === 'string' ? value.trim() : value))
+  @Transform(trim)
   @IsString()
   @MinLength(1)
   @MaxLength(NAME_MAX_LENGTH)
@@ -199,7 +200,8 @@ export class FolderContentsDto {
 
   @ApiProperty({
     example: 'Anna Kovalenko',
-    description: 'Name only. The owner email is exposed by /shared-with-me, which is never anonymous.',
+    description:
+      'Name only. The owner email is exposed by /shared-with-me, which is never anonymous.',
   })
   ownerName!: string;
 

@@ -16,19 +16,21 @@ import {
   NAME_PATTERN,
   NAME_PATTERN_MESSAGE,
 } from '../../common/validation/name.rules';
+import { trim } from '../../common/validation/transforms';
 import { Role } from '../../access/role.enum';
 import { ResourceOwner } from '../../common/types/resource-owner.interface';
 import { FileEntity } from '../entities/file.entity';
-
-const trim = ({ value }: { value: unknown }): unknown =>
-  typeof value === 'string' ? value.trim() : value;
 
 export class CreateUploadUrlDto {
   @ApiProperty({ format: 'uuid' })
   @IsUUID()
   dataRoomId!: string;
 
-  @ApiPropertyOptional({ format: 'uuid', nullable: true, description: 'null uploads to the room root' })
+  @ApiPropertyOptional({
+    format: 'uuid',
+    nullable: true,
+    description: 'null uploads to the room root',
+  })
   @IsOptional()
   @ValidateIf((_, value) => value !== null)
   @IsUUID()
@@ -148,7 +150,8 @@ export class FileDto {
 
   @ApiProperty({
     example: 'Anna Kovalenko',
-    description: 'Name only. The owner email is exposed by /shared-with-me, which is never anonymous.',
+    description:
+      'Name only. The owner email is exposed by /shared-with-me, which is never anonymous.',
   })
   ownerName!: string;
 

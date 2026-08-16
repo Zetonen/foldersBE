@@ -54,7 +54,7 @@ export class GoogleOAuthService {
   get isConfigured(): boolean {
     return Boolean(
       this.configService.get<string>('GOOGLE_CLIENT_ID') &&
-        this.configService.get<string>('GOOGLE_CLIENT_SECRET'),
+      this.configService.get<string>('GOOGLE_CLIENT_SECRET'),
     );
   }
 
@@ -174,7 +174,9 @@ export class GoogleOAuthService {
     }
 
     try {
-      return JSON.parse(Buffer.from(segments[1], 'base64url').toString('utf8')) as GoogleIdTokenClaims;
+      return JSON.parse(
+        Buffer.from(segments[1], 'base64url').toString('utf8'),
+      ) as GoogleIdTokenClaims;
     } catch {
       throw new UnauthorizedException('Google identity token is malformed');
     }
@@ -201,10 +203,7 @@ export class GoogleOAuthService {
       return configured;
     }
 
-    const frontendUrl = this.configService
-      .getOrThrow<string>('FRONTEND_URL')
-      .split(',')[0]
-      .trim();
+    const frontendUrl = this.configService.getOrThrow<string>('FRONTEND_URL').split(',')[0].trim();
 
     return `${frontendUrl.replace(/\/+$/, '')}/auth/callback`;
   }

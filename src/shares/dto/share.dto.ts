@@ -1,6 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
 import { IsDateString, IsEmail, IsEnum, IsOptional, IsUUID, MaxLength } from 'class-validator';
+import { trimLower } from '../../common/validation/transforms';
 import { Role } from '../../access/role.enum';
 import { ShareKind, ShareResourceType, ShareRole } from '../enums/share.enums';
 
@@ -19,7 +20,7 @@ export class CreateShareDto {
 
   @ApiPropertyOptional({ example: 'bob@example.com', description: 'Required for kind=USER' })
   @IsOptional()
-  @Transform(({ value }) => (typeof value === 'string' ? value.trim().toLowerCase() : value))
+  @Transform(trimLower)
   @IsEmail()
   @MaxLength(255)
   granteeEmail?: string;

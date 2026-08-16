@@ -30,8 +30,26 @@ export class ShareViewDto {
   @ApiProperty({ type: [FolderItemDto] })
   items!: FolderItemDto[];
 
-  @ApiProperty({ nullable: true, description: 'Pass back as ?cursor= to fetch the next page' })
+  @ApiProperty({
+    nullable: true,
+    description: 'Pass back as ?cursor= to fetch the next page. null means this was the last page.',
+  })
   nextCursor!: string | null;
+
+  @ApiProperty({
+    example: 137,
+    description: 'Direct children of the folder being listed, 0 for a file share.',
+  })
+  totalItems!: number;
+
+  @ApiProperty({ format: 'uuid', description: 'Data room owner, the person who shared this' })
+  ownerId!: string;
+
+  @ApiProperty({
+    example: 'Anna Kovalenko',
+    description: 'Name only. The owner email is never exposed to an anonymous link visitor.',
+  })
+  ownerName!: string;
 
   @ApiProperty({ enum: Role })
   myRole!: Role;

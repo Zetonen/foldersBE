@@ -30,9 +30,7 @@ export class SupabaseStorageService implements StorageProvider {
   }
 
   async createUploadUrl(storageKey: string): Promise<SignedUpload> {
-    const { data, error } = await this.client
-      .from(this.bucket)
-      .createSignedUploadUrl(storageKey);
+    const { data, error } = await this.client.from(this.bucket).createSignedUploadUrl(storageKey);
 
     if (error || !data) {
       throw new InternalServerErrorException(`Storage upload URL failed: ${error?.message}`);
@@ -48,8 +46,11 @@ export class SupabaseStorageService implements StorageProvider {
   ): Promise<string> {
     const { data, error } = await this.client
       .from(this.bucket)
-      .createSignedUrl(storageKey, ttlSeconds,
-        downloadFileName ? { download: downloadFileName } : undefined);
+      .createSignedUrl(
+        storageKey,
+        ttlSeconds,
+        downloadFileName ? { download: downloadFileName } : undefined,
+      );
 
     if (error || !data) {
       if (this.isMissingObject(error)) {

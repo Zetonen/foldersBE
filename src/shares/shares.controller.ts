@@ -63,7 +63,10 @@ export class SharesController {
 
   @Delete(':id')
   @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: 'Revoke a share', description: 'Sets revoked_at, never deletes the row.' })
+  @ApiOperation({
+    summary: 'Revoke a share',
+    description: 'Sets revoked_at, never deletes the row.',
+  })
   @ApiNoContentResponse({ description: 'Revoked' })
   @ApiNotFoundResponse({ description: 'Share not found' })
   @ApiForbiddenResponse({ description: 'Only the owner can revoke a share' })

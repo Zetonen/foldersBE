@@ -87,7 +87,11 @@ export class ResourceAccessGuard implements CanActivate {
       return target.type;
     }
 
-    const raw = this.readValue(request, target.typeFrom ?? 'body', target.typeKey ?? 'resourceType');
+    const raw = this.readValue(
+      request,
+      target.typeFrom ?? 'body',
+      target.typeKey ?? 'resourceType',
+    );
 
     if (!raw || !Object.values(ShareResourceType).includes(raw as ShareResourceType)) {
       throw new BadRequestException('resourceType is invalid');

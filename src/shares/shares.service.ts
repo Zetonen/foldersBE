@@ -1,4 +1,9 @@
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { randomBytes } from 'crypto';
 import { DataSource } from 'typeorm';
@@ -54,10 +59,7 @@ export class SharesService {
     return this.createUserShare(actor, dto, expiresAt);
   }
 
-  async listForResource(
-    resourceType: ShareResourceType,
-    resourceId: string,
-  ): Promise<ShareDto[]> {
+  async listForResource(resourceType: ShareResourceType, resourceId: string): Promise<ShareDto[]> {
     const rows: ShareRow[] = await this.dataSource.query(
       `
         SELECT ${SHARE_COLUMNS} FROM shares
@@ -160,7 +162,9 @@ export class SharesService {
 
     const entries = [...unique.values()];
     const sharedRoomIds = new Set(
-      entries.filter((row) => row.resource_type === ShareResourceType.DataRoom).map((row) => row.room_id),
+      entries
+        .filter((row) => row.resource_type === ShareResourceType.DataRoom)
+        .map((row) => row.room_id),
     );
     const sharedFolders = entries
       .filter((row) => row.resource_type === ShareResourceType.Folder && row.folder_path)

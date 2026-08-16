@@ -1,7 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { AccessResolverService } from '../access/access-resolver.service';
 import { AccessDecision } from '../access/access.types';
-import { Role } from '../access/role.enum';
 import { FilesService } from '../files/files.service';
 import { ListChildrenQueryDto } from '../folders/dto/folder.dto';
 import { FoldersService } from '../folders/folders.service';
@@ -42,6 +41,9 @@ export class ShareViewService {
         breadcrumbs: [],
         items: [],
         nextCursor: null,
+        totalItems: 0,
+        ownerId: file.ownerId,
+        ownerName: file.ownerName,
         myRole: decision.role,
       };
     }
@@ -59,6 +61,9 @@ export class ShareViewService {
       breadcrumbs: contents.breadcrumbs,
       items: contents.items,
       nextCursor: contents.nextCursor,
+      totalItems: contents.totalItems,
+      ownerId: contents.ownerId,
+      ownerName: contents.ownerName,
       myRole: contents.myRole,
     };
   }
@@ -78,7 +83,10 @@ export class ShareViewService {
       breadcrumbs: contents.breadcrumbs,
       items: contents.items,
       nextCursor: contents.nextCursor,
-      myRole: contents.myRole ?? Role.Viewer,
+      totalItems: contents.totalItems,
+      ownerId: contents.ownerId,
+      ownerName: contents.ownerName,
+      myRole: contents.myRole,
     };
   }
 }

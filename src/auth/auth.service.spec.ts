@@ -26,10 +26,12 @@ function makeUser(overrides: Partial<User> = {}): User {
 }
 
 interface Stubs {
-  users: jest.Mocked<Pick<
-    UsersService,
-    'findByEmail' | 'findByGoogleId' | 'findById' | 'linkGoogleId' | 'createFromGoogle'
-  >>;
+  users: jest.Mocked<
+    Pick<
+      UsersService,
+      'findByEmail' | 'findByGoogleId' | 'findById' | 'linkGoogleId' | 'createFromGoogle'
+    >
+  >;
   google: jest.Mocked<Pick<GoogleOAuthService, 'verifyState' | 'exchangeCode'>>;
   service: AuthService;
 }

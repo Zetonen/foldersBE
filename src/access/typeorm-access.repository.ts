@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectDataSource } from '@nestjs/typeorm';
 import { DataSource } from 'typeorm';
-import { ShareResourceType } from '../shares/enums/share.enums';
+import { ShareResourceType, ShareRole } from '../shares/enums/share.enums';
 import { AccessActor, AccessRepository, ResourceNode, ShareGrant } from './access.types';
 import { fromShareRole } from './role.enum';
 
@@ -50,7 +50,7 @@ export class TypeormAccessRepository implements AccessRepository {
       return [];
     }
 
-    const rows: Array<{ id: string; resource_id: string; role: string }> =
+    const rows: Array<{ id: string; resource_id: string; role: ShareRole }> =
       await this.dataSource.query(
         `
           SELECT id, resource_id, role
@@ -70,7 +70,7 @@ export class TypeormAccessRepository implements AccessRepository {
     return rows.map((row) => ({
       id: row.id,
       resourceId: row.resource_id,
-      role: fromShareRole(row.role as never),
+      role: fromShareRole(row.role),
     }));
   }
 

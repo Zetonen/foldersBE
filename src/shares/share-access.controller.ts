@@ -26,10 +26,7 @@ export class ShareAccessController {
   })
   @ApiOkResponse({ type: ShareViewDto })
   @ApiNotFoundResponse({ description: 'Share link is invalid, revoked or expired' })
-  open(
-    @Param('token') token: string,
-    @Query() query: ListChildrenQueryDto,
-  ): Promise<ShareViewDto> {
+  open(@Param('token') token: string, @Query() query: ListChildrenQueryDto): Promise<ShareViewDto> {
     return this.shareViewService.openByToken(token, query);
   }
 

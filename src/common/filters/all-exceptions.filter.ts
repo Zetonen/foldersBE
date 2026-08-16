@@ -9,6 +9,7 @@ import {
 import { Response } from 'express';
 import { QueryFailedError } from 'typeorm';
 
+const SERVER_ERROR_THRESHOLD: number = HttpStatus.INTERNAL_SERVER_ERROR;
 const UNIQUE_VIOLATION = '23505';
 const FOREIGN_KEY_VIOLATION = '23503';
 const CHECK_VIOLATION = '23514';
@@ -27,9 +28,9 @@ export class AllExceptionsFilter implements ExceptionFilter {
     const response = host.switchToHttp().getResponse<Response>();
     const body = this.toBody(exception);
 
-    if (body.statusCode >= HttpStatus.INTERNAL_SERVER_ERROR) {
+    if (body.statusCode >= SERVER_ERROR_THRESHOLD) {
       this.logger.error(
-        exception instanceof Error ? exception.stack ?? exception.message : String(exception),
+        exception instanceof Error ? (exception.stack ?? exception.message) : String(exception),
       );
     }
 
@@ -99,7 +100,8 @@ export class AllExceptionsFilter implements ExceptionFilter {
 
   private reasonFor(statusCode: number): string {
     return (
-      Object.entries(HttpStatus).find(([, value]) => value === statusCode)?.[0] ?? 'Error'
+      Object.entries(HttpStatus).find(([, value]) => (value as number) === statusCode)?.[0] ??
+      'Error'
     )
       .toLowerCase()
       .split('_')

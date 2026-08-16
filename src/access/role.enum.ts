@@ -10,16 +10,16 @@ const RANK: Record<Role, number> = {
   [Role.Owner]: 100,
 };
 
-export function rankOf(role: Role): number {
-  return RANK[role];
-}
+const SHARE_ROLE_TO_ROLE: Record<ShareRole, Role> = {
+  [ShareRole.Viewer]: Role.Viewer,
+};
 
 export function maxRole(a: Role | null, b: Role): Role {
   return a === null || RANK[b] > RANK[a] ? b : a;
 }
 
 export function fromShareRole(role: ShareRole): Role {
-  return role === ShareRole.Viewer ? Role.Viewer : Role.Viewer;
+  return SHARE_ROLE_TO_ROLE[role];
 }
 
 export function satisfies(actual: Role, required: Role): boolean {

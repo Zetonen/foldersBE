@@ -198,7 +198,9 @@ describe('GoogleOAuthService', () => {
     });
 
     it('reports 503 when Google is unreachable', async () => {
-      global.fetch = jest.fn().mockRejectedValue(new Error('ECONNRESET')) as unknown as typeof fetch;
+      global.fetch = jest
+        .fn()
+        .mockRejectedValue(new Error('ECONNRESET')) as unknown as typeof fetch;
 
       await expect(makeService().exchangeCode('code')).rejects.toMatchObject({ status: 503 });
     });

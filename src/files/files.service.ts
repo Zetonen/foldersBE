@@ -233,7 +233,9 @@ export class FilesService {
     excludeFileId?: string,
   ): Promise<string> {
     const params: unknown[] = [dataRoomId];
-    const folderCondition = folderId ? `folder_id = $${params.push(folderId)}` : 'folder_id IS NULL';
+    const folderCondition = folderId
+      ? `folder_id = $${params.push(folderId)}`
+      : 'folder_id IS NULL';
     const pattern = params.push(
       this.nameConflictService.buildLikePattern(desiredName, { splitExtension: true }),
     );
@@ -274,7 +276,10 @@ export class FilesService {
   }
 
   private translateUniqueViolation(error: unknown): Error {
-    if (error instanceof QueryFailedError && (error as { code?: string }).code === UNIQUE_VIOLATION) {
+    if (
+      error instanceof QueryFailedError &&
+      (error as { code?: string }).code === UNIQUE_VIOLATION
+    ) {
       return new ConflictException('A file with this name already exists here');
     }
 

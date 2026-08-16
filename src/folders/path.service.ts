@@ -25,11 +25,7 @@ export class PathService {
     return `${path}%`;
   }
 
-  async maxSubtreeDepth(
-    manager: EntityManager,
-    dataRoomId: string,
-    path: string,
-  ): Promise<number> {
+  async maxSubtreeDepth(manager: EntityManager, dataRoomId: string, path: string): Promise<number> {
     const rows: Array<{ max_depth: number | null }> = await manager.query(
       `
         SELECT MAX(length(path) - length(replace(path, '/', ''))) - 1 AS max_depth

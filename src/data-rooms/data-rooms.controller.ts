@@ -53,7 +53,7 @@ export class DataRoomsController {
   async findMine(@CurrentUser() user: AuthUser): Promise<DataRoomDto[]> {
     const rooms = await this.dataRoomsService.findMine(user.id);
 
-    return rooms.map(DataRoomDto.fromEntity);
+    return rooms.map((room) => DataRoomDto.fromEntity(room));
   }
 
   @Patch(':id')

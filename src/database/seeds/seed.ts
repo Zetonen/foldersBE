@@ -219,7 +219,9 @@ async function seed(): Promise<void> {
   const bucket = process.env.SUPABASE_STORAGE_BUCKET ?? '';
 
   if (!client) {
-    console.warn('SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY missing — file rows will point at objects that do not exist');
+    console.warn(
+      'SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY missing — file rows will point at objects that do not exist',
+    );
   }
 
   const summary = await dataSource.transaction(async (manager) => {
@@ -294,8 +296,12 @@ async function seed(): Promise<void> {
   console.log(`  room     ${summary.roomId} (${ROOM_NAME})`);
   console.log(`  tree     ${summary.folders} folders, ${summary.files} files`);
   console.log(`  share    folder ${summary.sharedFolderId} (Financials) -> ${USERS[1].email}`);
-  console.log(`  share    file   ${summary.sharedFileId} (Legal/Contracts/msa.pdf) -> ${USERS[1].email}`);
-  console.log(`           its folder ${summary.sharedFileFolderId} stays out of reach — 404 for the grantee`);
+  console.log(
+    `  share    file   ${summary.sharedFileId} (Legal/Contracts/msa.pdf) -> ${USERS[1].email}`,
+  );
+  console.log(
+    `           its folder ${summary.sharedFileFolderId} stays out of reach — 404 for the grantee`,
+  );
   console.log(`  link     GET /share/${summary.token}`);
 }
 

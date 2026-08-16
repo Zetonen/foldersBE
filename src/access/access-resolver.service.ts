@@ -1,10 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import {
-  ACCESS_REPOSITORY,
-  AccessDecision,
-  AccessRepository,
-  ResolveInput,
-} from './access.types';
+import { ACCESS_REPOSITORY, AccessDecision, AccessRepository, ResolveInput } from './access.types';
 import { maxRole, Role } from './role.enum';
 
 @Injectable()
