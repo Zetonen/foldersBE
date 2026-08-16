@@ -65,18 +65,26 @@ export class MoveFolderDto {
   parentId!: string | null;
 }
 
+export const DEFAULT_PAGE_LIMIT = 50;
+export const MAX_PAGE_LIMIT = 100;
+
 export class ListChildrenQueryDto {
   @ApiPropertyOptional({ description: 'Opaque cursor returned as nextCursor' })
   @IsOptional()
   @IsString()
   cursor?: string;
 
-  @ApiPropertyOptional({ minimum: 1, maximum: 200, default: 50 })
+  @ApiPropertyOptional({
+    minimum: 1,
+    maximum: MAX_PAGE_LIMIT,
+    default: DEFAULT_PAGE_LIMIT,
+    description: `Page size. Above ${MAX_PAGE_LIMIT} the request is rejected with 400, it is not silently truncated.`,
+  })
   @IsOptional()
   @Type(() => Number)
   @IsInt()
   @Min(1)
-  @Max(200)
+  @Max(MAX_PAGE_LIMIT)
   limit?: number;
 }
 
@@ -170,8 +178,18 @@ export class FolderContentsDto {
   @ApiProperty({ type: [FolderItemDto] })
   items!: FolderItemDto[];
 
-  @ApiProperty({ nullable: true, description: 'Pass back as ?cursor= to fetch the next page' })
+  @ApiProperty({
+    nullable: true,
+    description: 'Pass back as ?cursor= to fetch the next page. null means this was the last page.',
+  })
   nextCursor!: string | null;
+
+  @ApiProperty({
+    example: 137,
+    description:
+      'Direct children of this folder, folders and files together, ignoring pagination. Same number as directItemCount in /folders/:id/stats. Not the subtree.',
+  })
+  totalItems!: number;
 
   @ApiProperty({
     format: 'uuid',
@@ -193,9 +211,39 @@ export class FolderStatsDto {
   @ApiProperty({ example: 5242880, description: 'Sum of size_bytes across the whole subtree' })
   totalSize!: number;
 
-  @ApiProperty({ example: 12 })
+  @ApiProperty({
+    example: 1,
+    description: 'Folders whose parent_id is this folder. One level only.',
+  })
+  directFolderCount!: number;
+
+  @ApiProperty({
+    example: 4,
+    description: 'Files whose folder_id is this folder. One level only.',
+  })
+  directFileCount!: number;
+
+  @ApiProperty({
+    example: 5,
+    description: 'directFolderCount + directFileCount. Show this in the details panel.',
+  })
+  directItemCount!: number;
+
+  @ApiProperty({
+    example: 81,
+    description: 'Files anywhere below this folder. Show this in the delete confirmation.',
+  })
+  subtreeFileCount!: number;
+
+  @ApiProperty({
+    example: 3,
+    description: 'Folders anywhere below this folder, the folder itself excluded.',
+  })
+  subtreeFolderCount!: number;
+
+  @ApiProperty({ example: 81, deprecated: true, description: 'Alias of subtreeFileCount' })
   fileCount!: number;
 
-  @ApiProperty({ example: 3, description: 'Descendant folders, the folder itself excluded' })
+  @ApiProperty({ example: 3, deprecated: true, description: 'Alias of subtreeFolderCount' })
   folderCount!: number;
 }

@@ -11,6 +11,7 @@ import { DataRoom } from '../data-rooms/entities/data-room.entity';
 import {
   BreadcrumbDto,
   CreateFolderDto,
+  DEFAULT_PAGE_LIMIT,
   FolderContentsDto,
   FolderDto,
   FolderItemDto,
@@ -23,7 +24,6 @@ import { Folder } from './entities/folder.entity';
 import { MAX_FOLDER_DEPTH, PathService } from './path.service';
 
 const UNIQUE_VIOLATION = '23505';
-const DEFAULT_LIMIT = 50;
 
 interface ItemRow {
   type: 'FOLDER' | 'FILE';
@@ -215,30 +215,53 @@ export class FoldersService {
   async stats(folderId: string): Promise<FolderStatsDto> {
     const folder = await this.getFolderOrFail(this.dataSource.manager, folderId);
 
-    const rows: Array<{ folder_count: string; file_count: string; total_size: string }> =
-      await this.dataSource.query(
-        `
-          WITH subtree AS (
-            SELECT id FROM folders
-            WHERE data_room_id = $1 AND path LIKE $2 AND deleted_at IS NULL
-          ), file_totals AS (
-            SELECT count(*) AS file_count, coalesce(sum(size_bytes), 0) AS total_size
-            FROM files
-            WHERE data_room_id = $1 AND deleted_at IS NULL
-              AND folder_id IN (SELECT id FROM subtree)
-          )
-          SELECT (SELECT count(*) FROM subtree) - 1 AS folder_count,
-                 file_totals.file_count,
-                 file_totals.total_size
-          FROM file_totals
-        `,
-        [folder.dataRoomId, this.pathService.subtreePattern(folder.path)],
-      );
+    const rows: Array<{
+      folder_count: string;
+      file_count: string;
+      total_size: string;
+      direct_folder_count: string;
+      direct_file_count: string;
+    }> = await this.dataSource.query(
+      `
+        WITH subtree AS (
+          SELECT id FROM folders
+          WHERE data_room_id = $1 AND path LIKE $2 AND deleted_at IS NULL
+        ), file_totals AS (
+          SELECT count(*) AS file_count, coalesce(sum(size_bytes), 0) AS total_size
+          FROM files
+          WHERE data_room_id = $1 AND deleted_at IS NULL
+            AND folder_id IN (SELECT id FROM subtree)
+        )
+        SELECT (SELECT count(*) FROM subtree) - 1 AS folder_count,
+               file_totals.file_count,
+               file_totals.total_size,
+               (
+                 SELECT count(*) FROM folders
+                 WHERE data_room_id = $1 AND parent_id = $3 AND deleted_at IS NULL
+               ) AS direct_folder_count,
+               (
+                 SELECT count(*) FROM files
+                 WHERE data_room_id = $1 AND folder_id = $3 AND deleted_at IS NULL
+               ) AS direct_file_count
+        FROM file_totals
+      `,
+      [folder.dataRoomId, this.pathService.subtreePattern(folder.path), folder.id],
+    );
+
+    const subtreeFileCount = Number(rows[0].file_count);
+    const subtreeFolderCount = Number(rows[0].folder_count);
+    const directFolderCount = Number(rows[0].direct_folder_count);
+    const directFileCount = Number(rows[0].direct_file_count);
 
     return {
       totalSize: Number(rows[0].total_size),
-      fileCount: Number(rows[0].file_count),
-      folderCount: Number(rows[0].folder_count),
+      directFolderCount,
+      directFileCount,
+      directItemCount: directFolderCount + directFileCount,
+      subtreeFileCount,
+      subtreeFolderCount,
+      fileCount: subtreeFileCount,
+      folderCount: subtreeFolderCount,
     };
   }
 
@@ -256,7 +279,7 @@ export class FoldersService {
     query: ListChildrenQueryDto,
     access: AccessDecision,
   ): Promise<FolderContentsDto> {
-    const limit = query.limit ?? DEFAULT_LIMIT;
+    const limit = query.limit ?? DEFAULT_PAGE_LIMIT;
     const cursor = this.decodeCursor(query.cursor);
     const parentId = folder?.id ?? null;
 
@@ -291,7 +314,10 @@ export class FoldersService {
     const page = hasMore ? rows.slice(0, limit) : rows;
     const last = page[page.length - 1];
     const roomIsVisible = access.boundaryId === null || access.boundaryId === room.id;
-    const owner = await this.getRoomOwner(room.id);
+    const [owner, totalItems] = await Promise.all([
+      this.getRoomOwner(room.id),
+      this.countDirectChildren(room.id, parentId),
+    ]);
 
     return {
       dataRoom: roomIsVisible ? { id: room.id, name: room.name } : null,
@@ -299,10 +325,35 @@ export class FoldersService {
       breadcrumbs: folder ? await this.buildBreadcrumbs(folder, access.boundaryId) : [],
       items: page.map((row) => this.toItemDto(row)),
       nextCursor: hasMore && last ? this.encodeCursor({ n: last.name, i: last.id }) : null,
+      totalItems,
       myRole: access.role,
       ownerId: owner.id,
       ownerName: owner.name,
     };
+  }
+
+  private async countDirectChildren(dataRoomId: string, parentId: string | null): Promise<number> {
+    const params: unknown[] = [dataRoomId];
+    const folderCondition = parentId
+      ? `parent_id = $${params.push(parentId)}`
+      : 'parent_id IS NULL';
+    const fileCondition = parentId ? `folder_id = $${params.length}` : 'folder_id IS NULL';
+
+    const rows: Array<{ total: string }> = await this.dataSource.query(
+      `
+        SELECT
+          (
+            SELECT count(*) FROM folders
+            WHERE data_room_id = $1 AND ${folderCondition} AND deleted_at IS NULL
+          ) + (
+            SELECT count(*) FROM files
+            WHERE data_room_id = $1 AND ${fileCondition} AND deleted_at IS NULL
+          ) AS total
+      `,
+      params,
+    );
+
+    return Number(rows[0].total);
   }
 
   async getRoomOwner(dataRoomId: string, manager?: EntityManager): Promise<ResourceOwner> {

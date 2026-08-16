@@ -71,9 +71,11 @@ export class FoldersController {
   @RequireRole(Role.Viewer)
   @ApiOperation({
     summary: 'List folders and files inside a folder',
-    description: 'Keyset pagination over (name, id). Pass nextCursor back as ?cursor=.',
+    description:
+      'Keyset pagination over (name, id). Pass nextCursor back as ?cursor=, a null nextCursor means the last page. limit defaults to 50 and is capped at 100. totalItems counts the direct children of this folder only.',
   })
   @ApiOkResponse({ type: FolderContentsDto })
+  @ApiBadRequestResponse({ description: 'limit above 100, or a malformed cursor' })
   @ApiNotFoundResponse({ description: 'Folder not found' })
   children(
     @Param('id', ParseUUIDPipe) id: string,
@@ -87,8 +89,9 @@ export class FoldersController {
   @ResourceTarget({ type: ShareResourceType.Folder, from: 'params', key: 'id' })
   @RequireRole(Role.Viewer)
   @ApiOperation({
-    summary: 'Subtree totals, used to warn before deletion',
-    description: 'Single SQL query over the subtree selected by path LIKE.',
+    summary: 'Direct and subtree counters for a folder',
+    description:
+      'One SQL query. direct* counts one level down and belongs in the details panel. subtree* and totalSize cover the whole branch and belong in the delete confirmation.',
   })
   @ApiOkResponse({ type: FolderStatsDto })
   @ApiNotFoundResponse({ description: 'Folder not found' })

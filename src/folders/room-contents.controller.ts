@@ -1,5 +1,6 @@
 import { Controller, Get, Param, ParseUUIDPipe, Query, UseGuards } from '@nestjs/common';
 import {
+  ApiBadRequestResponse,
   ApiBearerAuth,
   ApiHeader,
   ApiNotFoundResponse,
@@ -30,9 +31,11 @@ export class RoomContentsController {
   @RequireRole(Role.Viewer)
   @ApiOperation({
     summary: 'List folders and files in the data room root',
-    description: 'Same shape as /folders/:id/children, with folder = null and empty breadcrumbs.',
+    description:
+      'Same shape as /folders/:id/children, with folder = null and empty breadcrumbs. totalItems counts what sits directly in the root.',
   })
   @ApiOkResponse({ type: FolderContentsDto })
+  @ApiBadRequestResponse({ description: 'limit above 100, or a malformed cursor' })
   @ApiNotFoundResponse({ description: 'Data room not found' })
   root(
     @Param('id', ParseUUIDPipe) id: string,
