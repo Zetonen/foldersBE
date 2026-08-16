@@ -9,8 +9,11 @@ export class User {
   @Column({ type: 'text' })
   email!: string;
 
-  @Column({ type: 'text', name: 'password_hash' })
-  passwordHash!: string;
+  @Column({ type: 'text', name: 'password_hash', nullable: true })
+  passwordHash!: string | null;
+
+  @Column({ type: 'text', name: 'google_id', nullable: true })
+  googleId!: string | null;
 
   @Column({ type: 'text' })
   name!: string;

@@ -6,6 +6,7 @@ import {
   ApiCreatedResponse,
   ApiOkResponse,
   ApiOperation,
+  ApiServiceUnavailableResponse,
   ApiTags,
   ApiTooManyRequestsResponse,
   ApiUnauthorizedResponse,
@@ -20,6 +21,8 @@ import {
 import { AuthResult, AuthService } from './auth.service';
 import { CurrentUser } from './decorators/current-user.decorator';
 import { AuthResponseDto } from './dto/auth-response.dto';
+import { GoogleAuthUrlDto } from './dto/google-auth-url.dto';
+import { GoogleCallbackDto } from './dto/google-callback.dto';
 import { LoginDto } from './dto/login.dto';
 import { MessageResponseDto } from './dto/message-response.dto';
 import { RegisterDto } from './dto/register.dto';
@@ -70,6 +73,43 @@ export class AuthController {
     @Res({ passthrough: true }) response: Response,
   ): Promise<AuthResponseDto> {
     return this.respondWithTokens(await this.authService.login(dto), response);
+  }
+
+  @Get('google')
+  @ApiOperation({
+    summary: 'Start the Google sign-in flow',
+    description:
+      'Returns the Google consent screen URL. The frontend redirects the browser to it; Google then sends the user back to GOOGLE_REDIRECT_URI (by default FRONTEND_URL/auth/callback) with ?code and ?state, which the callback page forwards to POST /auth/google/callback.',
+  })
+  @ApiOkResponse({ type: GoogleAuthUrlDto })
+  @ApiServiceUnavailableResponse({ description: 'Google sign-in is not configured on this server' })
+  googleAuthUrl(): Promise<GoogleAuthUrlDto> {
+    return this.authService.googleAuthorizationUrl();
+  }
+
+  @Post('google/callback')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(ThrottlerGuard)
+  @ApiTooManyRequestsResponse({
+    description: 'Rate limit exceeded (AUTH_THROTTLE_LIMIT per AUTH_THROTTLE_TTL_SECONDS, per IP)',
+  })
+  @ApiOperation({
+    summary: 'Finish the Google sign-in flow',
+    description:
+      'Exchanges the one-time authorization code for a Google identity, then creates or links the local user and issues the same tokens as POST /auth/login. Matching is by Google account id first, then by verified email, so an account registered with a password can later sign in with Google.',
+  })
+  @ApiOkResponse({ type: AuthResponseDto })
+  @ApiUnauthorizedResponse({
+    description: 'Code already used, expired or issued for another application; or state invalid',
+  })
+  @ApiServiceUnavailableResponse({
+    description: 'Google sign-in is not configured, or Google is unreachable',
+  })
+  async googleCallback(
+    @Body() dto: GoogleCallbackDto,
+    @Res({ passthrough: true }) response: Response,
+  ): Promise<AuthResponseDto> {
+    return this.respondWithTokens(await this.authService.loginWithGoogle(dto), response);
   }
 
   @Post('refresh')

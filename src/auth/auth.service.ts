@@ -9,6 +9,9 @@ import { AuthResponseDto } from './dto/auth-response.dto';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { UserDto } from './dto/user.dto';
+import { GoogleAuthUrlDto } from './dto/google-auth-url.dto';
+import { GoogleCallbackDto } from './dto/google-callback.dto';
+import { GoogleOAuthService, GoogleProfile } from './google/google-oauth.service';
 import { JwtPayload } from './types/auth-user.interface';
 
 const DUMMY_HASH = '$2b$10$3S6yQ2X5rN0k7fP8bC1uQeJb0mZ5t3fXn6oH4vK9wR2sT1uV0xY6a';
@@ -24,6 +27,7 @@ export class AuthService {
     private readonly usersService: UsersService,
     private readonly jwtService: JwtService,
     private readonly configService: ConfigService,
+    private readonly googleOAuthService: GoogleOAuthService,
   ) {}
 
   async register(dto: RegisterDto): Promise<AuthResult> {
@@ -41,11 +45,27 @@ export class AuthService {
     const user = await this.usersService.findByEmail(dto.email);
     const matches = await bcrypt.compare(dto.password, user?.passwordHash ?? DUMMY_HASH);
 
+    if (user && !user.passwordHash) {
+      throw new UnauthorizedException('This account uses Google sign-in');
+    }
+
     if (!user || !matches) {
       throw new UnauthorizedException('Invalid email or password');
     }
 
     return this.issueTokens(user);
+  }
+
+  googleAuthorizationUrl(): Promise<GoogleAuthUrlDto> {
+    return this.googleOAuthService.createAuthorizationUrl();
+  }
+
+  async loginWithGoogle(dto: GoogleCallbackDto): Promise<AuthResult> {
+    await this.googleOAuthService.verifyState(dto.state);
+
+    const profile = await this.googleOAuthService.exchangeCode(dto.code);
+
+    return this.issueTokens(await this.resolveGoogleUser(profile));
   }
 
   async refresh(refreshToken: string | undefined): Promise<AuthResult> {
@@ -84,6 +104,26 @@ export class AuthService {
     }
 
     return UserDto.fromEntity(user);
+  }
+
+  private async resolveGoogleUser(profile: GoogleProfile): Promise<User> {
+    const linked = await this.usersService.findByGoogleId(profile.googleId);
+
+    if (linked) {
+      return linked;
+    }
+
+    const byEmail = await this.usersService.findByEmail(profile.email);
+
+    if (byEmail) {
+      return this.usersService.linkGoogleId(byEmail.id, profile.googleId);
+    }
+
+    return this.usersService.createFromGoogle({
+      email: profile.email,
+      name: profile.name,
+      googleId: profile.googleId,
+    });
   }
 
   private async issueTokens(user: User): Promise<AuthResult> {

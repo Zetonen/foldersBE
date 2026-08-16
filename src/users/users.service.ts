@@ -11,6 +11,12 @@ export interface CreateUserInput {
   name: string;
 }
 
+export interface CreateGoogleUserInput {
+  email: string;
+  name: string;
+  googleId: string;
+}
+
 @Injectable()
 export class UsersService {
   constructor(
@@ -29,14 +35,24 @@ export class UsersService {
       name: input.name.trim(),
     });
 
-    try {
-      return await this.usersRepository.save(user);
-    } catch (error) {
-      if (error instanceof QueryFailedError && (error as { code?: string }).code === UNIQUE_VIOLATION) {
-        throw new ConflictException('Email is already registered');
-      }
-      throw error;
-    }
+    return this.save(user);
+  }
+
+  async createFromGoogle(input: CreateGoogleUserInput): Promise<User> {
+    const user = this.usersRepository.create({
+      email: UsersService.normalizeEmail(input.email),
+      passwordHash: null,
+      googleId: input.googleId,
+      name: input.name.trim(),
+    });
+
+    return this.save(user);
+  }
+
+  async linkGoogleId(userId: string, googleId: string): Promise<User> {
+    await this.usersRepository.update({ id: userId }, { googleId });
+
+    return this.usersRepository.findOneOrFail({ where: { id: userId } });
   }
 
   findByEmail(email: string): Promise<User | null> {
@@ -45,7 +61,25 @@ export class UsersService {
     });
   }
 
+  findByGoogleId(googleId: string): Promise<User | null> {
+    return this.usersRepository.findOne({ where: { googleId } });
+  }
+
   findById(id: string): Promise<User | null> {
     return this.usersRepository.findOne({ where: { id } });
+  }
+
+  private async save(user: User): Promise<User> {
+    try {
+      return await this.usersRepository.save(user);
+    } catch (error) {
+      if (
+        error instanceof QueryFailedError &&
+        (error as { code?: string }).code === UNIQUE_VIOLATION
+      ) {
+        throw new ConflictException('Email is already registered');
+      }
+      throw error;
+    }
   }
 }

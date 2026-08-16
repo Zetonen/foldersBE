@@ -74,6 +74,18 @@ export class EnvironmentVariables {
   JWT_REFRESH_TTL: string = '7d';
 
   @IsString()
+  @IsOptional()
+  GOOGLE_CLIENT_ID?: string;
+
+  @IsString()
+  @IsOptional()
+  GOOGLE_CLIENT_SECRET?: string;
+
+  @IsString()
+  @IsOptional()
+  GOOGLE_REDIRECT_URI?: string;
+
+  @IsString()
   SUPABASE_URL!: string;
 
   @IsString()
