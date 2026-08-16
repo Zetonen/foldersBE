@@ -17,6 +17,7 @@ import {
   NAME_PATTERN_MESSAGE,
 } from '../../common/validation/name.rules';
 import { Role } from '../../access/role.enum';
+import { ResourceOwner } from '../../common/types/resource-owner.interface';
 import { FileEntity } from '../entities/file.entity';
 
 const trim = ({ value }: { value: unknown }): unknown =>
@@ -145,13 +146,13 @@ export class FileDto {
   })
   ownerId!: string;
 
-  @ApiProperty({ example: 'Anna Kovalenko' })
+  @ApiProperty({
+    example: 'Anna Kovalenko',
+    description: 'Name only. The owner email is exposed by /shared-with-me, which is never anonymous.',
+  })
   ownerName!: string;
 
-  @ApiProperty({ example: 'anna@example.com' })
-  ownerEmail!: string;
-
-  static fromEntity(file: FileEntity, myRole: Role, owner: FileOwner): FileDto {
+  static fromEntity(file: FileEntity, myRole: Role, owner: ResourceOwner): FileDto {
     return {
       id: file.id,
       dataRoomId: file.dataRoomId,
@@ -164,15 +165,8 @@ export class FileDto {
       myRole,
       ownerId: owner.id,
       ownerName: owner.name,
-      ownerEmail: owner.email,
     };
   }
-}
-
-export interface FileOwner {
-  id: string;
-  name: string;
-  email: string;
 }
 
 export class UploadUrlDto {

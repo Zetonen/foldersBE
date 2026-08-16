@@ -173,6 +173,18 @@ export class FolderContentsDto {
   @ApiProperty({ nullable: true, description: 'Pass back as ?cursor= to fetch the next page' })
   nextCursor!: string | null;
 
+  @ApiProperty({
+    format: 'uuid',
+    description: 'Data room owner. Every folder and file in this listing belongs to them.',
+  })
+  ownerId!: string;
+
+  @ApiProperty({
+    example: 'Anna Kovalenko',
+    description: 'Name only. The owner email is exposed by /shared-with-me, which is never anonymous.',
+  })
+  ownerName!: string;
+
   @ApiProperty({ enum: Role, description: 'Effective role of the caller, items inherit it' })
   myRole!: Role;
 }

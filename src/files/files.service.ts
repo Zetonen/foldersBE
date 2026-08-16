@@ -20,7 +20,6 @@ import {
   CreateUploadUrlDto,
   DownloadUrlDto,
   FileDto,
-  FileOwner,
   MoveFileDto,
   RenameFileDto,
   UploadUrlDto,
@@ -257,12 +256,9 @@ export class FilesService {
   }
 
   private async toDto(manager: EntityManager, file: FileEntity, role: Role): Promise<FileDto> {
-    const rows: FileOwner[] = await manager.query(
-      `SELECT u.id, u.name, u.email FROM data_rooms r JOIN users u ON u.id = r.owner_id WHERE r.id = $1`,
-      [file.dataRoomId],
-    );
+    const owner = await this.foldersService.getRoomOwner(file.dataRoomId, manager);
 
-    return FileDto.fromEntity(file, role, rows[0]);
+    return FileDto.fromEntity(file, role, owner);
   }
 
   private async getFileOrFail(manager: EntityManager, fileId: string): Promise<FileEntity> {

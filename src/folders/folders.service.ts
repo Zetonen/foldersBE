@@ -5,6 +5,7 @@ import { DataSource, EntityManager, IsNull, QueryFailedError } from 'typeorm';
 import { AccessDecision } from '../access/access.types';
 import { Role } from '../access/role.enum';
 import { NameConflictService } from '../common/services/name-conflict.service';
+import { ResourceOwner } from '../common/types/resource-owner.interface';
 import { DataRoomsService } from '../data-rooms/data-rooms.service';
 import { DataRoom } from '../data-rooms/entities/data-room.entity';
 import {
@@ -290,6 +291,7 @@ export class FoldersService {
     const page = hasMore ? rows.slice(0, limit) : rows;
     const last = page[page.length - 1];
     const roomIsVisible = access.boundaryId === null || access.boundaryId === room.id;
+    const owner = await this.getRoomOwner(room.id);
 
     return {
       dataRoom: roomIsVisible ? { id: room.id, name: room.name } : null,
@@ -298,7 +300,18 @@ export class FoldersService {
       items: page.map((row) => this.toItemDto(row)),
       nextCursor: hasMore && last ? this.encodeCursor({ n: last.name, i: last.id }) : null,
       myRole: access.role,
+      ownerId: owner.id,
+      ownerName: owner.name,
     };
+  }
+
+  async getRoomOwner(dataRoomId: string, manager?: EntityManager): Promise<ResourceOwner> {
+    const rows: ResourceOwner[] = await (manager ?? this.dataSource.manager).query(
+      `SELECT u.id, u.name FROM data_rooms r JOIN users u ON u.id = r.owner_id WHERE r.id = $1`,
+      [dataRoomId],
+    );
+
+    return rows[0];
   }
 
   private async buildBreadcrumbs(
