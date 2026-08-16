@@ -119,14 +119,14 @@ async function upsertFile(
   roomId: string,
   folderId: string,
   name: string,
-): Promise<void> {
+): Promise<string> {
   const existing: Array<{ id: string }> = await manager.query(
     `SELECT id FROM files WHERE data_room_id = $1 AND folder_id = $2 AND name = $3 AND deleted_at IS NULL`,
     [roomId, folderId, name],
   );
 
   if (existing.length > 0) {
-    return;
+    return existing[0].id;
   }
 
   const storageKey = `${roomId}/${randomUUID()}`;
@@ -141,17 +141,21 @@ async function upsertFile(
     }
   }
 
-  await manager.query(
+  const rows: Array<{ id: string }> = await manager.query(
     `
       INSERT INTO files (data_room_id, folder_id, name, size_bytes, mime_type, storage_key)
       VALUES ($1, $2, $3, $4, 'application/pdf', $5)
+      RETURNING id
     `,
     [roomId, folderId, name, PDF.length, storageKey],
   );
+
+  return rows[0].id;
 }
 
 async function upsertUserShare(
   manager: EntityManager,
+  resourceType: 'FOLDER' | 'FILE',
   resourceId: string,
   granteeId: string,
   granteeEmail: string,
@@ -173,9 +177,9 @@ async function upsertUserShare(
   await manager.query(
     `
       INSERT INTO shares (resource_type, resource_id, kind, role, grantee_user_id, grantee_email, created_by)
-      VALUES ('FOLDER', $1, 'USER', 'VIEWER', $2, $3, $4)
+      VALUES ($1::share_resource_type_enum, $2, 'USER', 'VIEWER', $3, $4, $5)
     `,
-    [resourceId, granteeId, granteeEmail, createdBy],
+    [resourceType, resourceId, granteeId, granteeEmail, createdBy],
   );
 }
 
@@ -225,6 +229,7 @@ async function seed(): Promise<void> {
     const roomId = await upsertRoom(manager, aliceId);
 
     const folders = new Map<string, { id: string; path: string }>();
+    const files = new Map<string, string>();
 
     for (const branch of TREE) {
       let parent: { id: string; path: string } | null = null;
@@ -239,14 +244,25 @@ async function seed(): Promise<void> {
       }
 
       for (const fileName of branch.files) {
-        await upsertFile(manager, client, bucket, roomId, (parent as { id: string }).id, fileName);
+        const fileId = await upsertFile(
+          manager,
+          client,
+          bucket,
+          roomId,
+          (parent as { id: string }).id,
+          fileName,
+        );
+
+        files.set([...branch.path, fileName].join('/'), fileId);
       }
     }
 
     const financials = folders.get('Due Diligence/Financials') as { id: string };
     const q1 = folders.get('Due Diligence/Financials/2026/Q1') as { id: string };
+    const msa = files.get('Legal/Contracts/msa.pdf') as string;
 
-    await upsertUserShare(manager, financials.id, bobId, USERS[1].email, aliceId);
+    await upsertUserShare(manager, 'FOLDER', financials.id, bobId, USERS[1].email, aliceId);
+    await upsertUserShare(manager, 'FILE', msa, bobId, USERS[1].email, aliceId);
     const token = await upsertPublicLink(manager, q1.id, aliceId);
 
     const counts: Array<{ folders: string; files: string }> = await manager.query(
@@ -261,6 +277,8 @@ async function seed(): Promise<void> {
     return {
       roomId,
       sharedFolderId: financials.id,
+      sharedFileId: msa,
+      sharedFileFolderId: (folders.get('Legal/Contracts') as { id: string }).id,
       publicFolderId: q1.id,
       token,
       folders: counts[0].folders,
@@ -275,7 +293,9 @@ async function seed(): Promise<void> {
   console.log(`  viewer   ${USERS[1].email} / ${PASSWORD}`);
   console.log(`  room     ${summary.roomId} (${ROOM_NAME})`);
   console.log(`  tree     ${summary.folders} folders, ${summary.files} files`);
-  console.log(`  share    folder ${summary.sharedFolderId} -> ${USERS[1].email}`);
+  console.log(`  share    folder ${summary.sharedFolderId} (Financials) -> ${USERS[1].email}`);
+  console.log(`  share    file   ${summary.sharedFileId} (Legal/Contracts/msa.pdf) -> ${USERS[1].email}`);
+  console.log(`           its folder ${summary.sharedFileFolderId} stays out of reach — 404 for the grantee`);
   console.log(`  link     GET /share/${summary.token}`);
 }
 
