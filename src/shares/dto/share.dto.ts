@@ -85,8 +85,14 @@ export class SharedWithMeItemDto {
   @ApiProperty({ example: 'Financials' })
   name!: string;
 
+  @ApiProperty({ format: 'uuid', description: 'Data room owner — the person who shared this' })
+  ownerId!: string;
+
   @ApiProperty({ example: 'Anna Kovalenko' })
   ownerName!: string;
+
+  @ApiProperty({ example: 'anna@example.com' })
+  ownerEmail!: string;
 
   @ApiProperty()
   sharedAt!: Date;

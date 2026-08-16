@@ -20,6 +20,7 @@ import {
   CreateUploadUrlDto,
   DownloadUrlDto,
   FileDto,
+  FileOwner,
   MoveFileDto,
   RenameFileDto,
   UploadUrlDto,
@@ -109,14 +110,14 @@ export class FilesService {
         throw this.translateUniqueViolation(error);
       }
 
-      return FileDto.fromEntity(await this.getFileOrFail(manager, id), role);
+      return this.toDto(manager, await this.getFileOrFail(manager, id), role);
     });
   }
 
   async findOne(fileId: string, role: Role): Promise<FileDto> {
     const file = await this.getFileOrFail(this.dataSource.manager, fileId);
 
-    return FileDto.fromEntity(file, role);
+    return this.toDto(this.dataSource.manager, file, role);
   }
 
   async createDownloadUrl(fileId: string): Promise<DownloadUrlDto> {
@@ -150,7 +151,7 @@ export class FilesService {
         throw this.translateUniqueViolation(error);
       }
 
-      return FileDto.fromEntity(await this.getFileOrFail(manager, file.id), role);
+      return this.toDto(manager, await this.getFileOrFail(manager, file.id), role);
     });
   }
 
@@ -177,7 +178,7 @@ export class FilesService {
         throw this.translateUniqueViolation(error);
       }
 
-      return FileDto.fromEntity(await this.getFileOrFail(manager, file.id), role);
+      return this.toDto(manager, await this.getFileOrFail(manager, file.id), role);
     });
   }
 
@@ -253,6 +254,15 @@ export class FilesService {
       rows.map((row) => row.name),
       { splitExtension: true },
     );
+  }
+
+  private async toDto(manager: EntityManager, file: FileEntity, role: Role): Promise<FileDto> {
+    const rows: FileOwner[] = await manager.query(
+      `SELECT u.id, u.name, u.email FROM data_rooms r JOIN users u ON u.id = r.owner_id WHERE r.id = $1`,
+      [file.dataRoomId],
+    );
+
+    return FileDto.fromEntity(file, role, rows[0]);
   }
 
   private async getFileOrFail(manager: EntityManager, fileId: string): Promise<FileEntity> {

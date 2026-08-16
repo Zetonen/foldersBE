@@ -24,7 +24,9 @@ interface ShareRow {
 
 interface SharedWithMeRow extends ShareRow {
   room_id: string;
+  owner_id: string;
   owner_name: string;
+  owner_email: string;
   folder_name: string | null;
   folder_path: string | null;
   file_name: string | null;
@@ -120,7 +122,8 @@ export class SharesService {
       `
         SELECT s.id, s.resource_type, s.resource_id, s.kind, s.role, s.grantee_email,
                s.grantee_user_id, s.token, s.expires_at, s.created_at,
-               room.id AS room_id, room.name AS room_name, owner.name AS owner_name,
+               room.id AS room_id, room.name AS room_name,
+               owner.id AS owner_id, owner.name AS owner_name, owner.email AS owner_email,
                folder.name AS folder_name, folder.path AS folder_path,
                file.name AS file_name, parent.path AS file_folder_path
         FROM shares s
@@ -192,7 +195,9 @@ export class SharesService {
       type: row.resource_type,
       id: row.resource_id,
       name: this.resourceName(row),
+      ownerId: row.owner_id,
       ownerName: row.owner_name,
+      ownerEmail: row.owner_email,
       sharedAt: row.created_at,
       myRole: Role.Viewer,
     }));

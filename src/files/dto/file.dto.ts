@@ -139,7 +139,19 @@ export class FileDto {
   @ApiProperty({ enum: Role, description: 'Effective role of the caller on this file' })
   myRole!: Role;
 
-  static fromEntity(file: FileEntity, myRole: Role): FileDto {
+  @ApiProperty({
+    format: 'uuid',
+    description: 'Owner of the data room this file lives in — the person who shared it',
+  })
+  ownerId!: string;
+
+  @ApiProperty({ example: 'Anna Kovalenko' })
+  ownerName!: string;
+
+  @ApiProperty({ example: 'anna@example.com' })
+  ownerEmail!: string;
+
+  static fromEntity(file: FileEntity, myRole: Role, owner: FileOwner): FileDto {
     return {
       id: file.id,
       dataRoomId: file.dataRoomId,
@@ -150,8 +162,17 @@ export class FileDto {
       createdAt: file.createdAt,
       updatedAt: file.updatedAt,
       myRole,
+      ownerId: owner.id,
+      ownerName: owner.name,
+      ownerEmail: owner.email,
     };
   }
+}
+
+export interface FileOwner {
+  id: string;
+  name: string;
+  email: string;
 }
 
 export class UploadUrlDto {
