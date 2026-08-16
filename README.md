@@ -14,10 +14,9 @@ sharing of a room, a folder or a single file — by public link or to a named us
 
 | | URL |
 |---|---|
-| API | `<railway-url>` |
-| Swagger | `<railway-url>/api/docs` |
+| API | `[<railway-url>](https://foldersbe-production.up.railway.app/)` |
+| Swagger | `[<railway-url>/api/docs](https://foldersbe-production.up.railway.app/api/docs)` |
 | Frontend | `<vercel-url>` |
-| Health | `<railway-url>/health` |
 
 ---
 
